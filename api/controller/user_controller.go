@@ -2,13 +2,13 @@ package controller
 
 import (
 	"context"
-	"crypto/sha256"
 	"time"
 
 	"github.com/google/uuid"
 	api "github.com/sinakeshmiri/imcore/api/generated"
 	"github.com/sinakeshmiri/imcore/domain"
 	"github.com/sinakeshmiri/imcore/model"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Handler struct {
@@ -24,9 +24,16 @@ func (h *Handler) CreateUser(
 	ctx context.Context,
 	req api.CreateUserRequestObject,
 ) (api.CreateUserResponseObject, error) {
-	hashed := sha256.New()
-	hashed.Write([]byte(req.Body.Password))
-	hashedPassword := hashed.Sum(nil)
+
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte(req.Body.Password),
+		bcrypt.DefaultCost,
+	)
+	if err != nil {
+		return api.CreateUser500Response{}, err
+	}
+
+	passwordHash := string(hash)
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return api.CreateUser500Response{}, err
@@ -34,7 +41,7 @@ func (h *Handler) CreateUser(
 	newUser := model.User{
 		ID:           id.String(),
 		Email:        string(req.Body.Email),
-		PasswordHash: string(hashedPassword),
+		PasswordHash: passwordHash,
 		IsActive:     true,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),

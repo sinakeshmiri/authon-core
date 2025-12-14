@@ -15,7 +15,7 @@ import (
 )
 
 func main() {
-	postgres, err := database.OpenPostgres("")
+	postgres, err := database.OpenPostgres("postgres://app:app@localhost:5432/app?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -27,8 +27,15 @@ func main() {
 	r.Use(middleware.Logger)
 
 	// 6. Register oapi handlers
-	api.HandlerFromMux(&*handler, r)
-
+	strict := api.NewStrictHandlerWithOptions(handler, nil, api.StrictHTTPServerOptions{
+		RequestErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		},
+		ResponseErrorHandlerFunc: func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		},
+	})
+	api.HandlerFromMux(strict, r)
 	log.Println("server running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Println(http.ListenAndServe(":8080", r))
 }

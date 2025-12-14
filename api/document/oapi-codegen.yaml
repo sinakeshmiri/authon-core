@@ -1,6 +1,5 @@
 package: generated
 output: api/generated/api.gen.go
-
 generate:
   models: true
   strict-server: true
