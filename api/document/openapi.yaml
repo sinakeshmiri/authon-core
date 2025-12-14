@@ -1,0 +1,54 @@
+openapi: 3.0.3
+
+info:
+  title: IAM Core API
+  description: API for user and role management
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /users:
+    post:
+      summary: Create a user
+      operationId: createUser
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+
+        '400':
+          description: Invalid input
+
+        '500':
+          description: Something went wrong
+
+
+components:
+  schemas:
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          example: sina
+        email:
+          type: string
+          format: email
+          example: sina@example.com
+        password:
+          type: string
+          format: password
+          example: secret123
