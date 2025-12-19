@@ -30,6 +30,28 @@ paths:
 
         '500':
           description: Something went wrong
+  /roles:
+    post:
+      summary: Create a role
+      operationId: createRole
+      tags:
+        - Roles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created successfully
+
+        '400':
+          description: Invalid input
+
+        '500':
+          description: Something went wrong
+
 
 
 components:
@@ -40,6 +62,7 @@ components:
         - username
         - email
         - password
+        - fullname
       properties:
         username:
           type: string
@@ -52,3 +75,22 @@ components:
           type: string
           format: password
           example: secret123
+        fullname:
+          type: string
+          example: sina
+    CreateRoleRequest:
+      type: object
+      required:
+        - rolename
+        - description
+        - owner
+      properties:
+       rolename:
+          type: string
+          example: sinaRole
+       owner:
+          type: string
+          example: myUsername
+       description:
+         type: string
+         example: test_role

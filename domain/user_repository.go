@@ -11,7 +11,9 @@ type UserRepository interface {
 }
 
 type User struct {
-	Email        string    `gorm:"type:varchar(320);uniqueIndex;not null;primaryKey"`
+	Username     string    `gorm:"type:varchar(320);uniqueIndex;not null;primaryKey"`
+	Email        string    `gorm:"type:varchar(320);uniqueIndex;not null"`
+	Fullname     string    `gorm:"type:varchar(320);not null"`
 	PasswordHash string    `gorm:"type:text;not null;column:password_hash"`
 	IsActive     bool      `gorm:"not null;default:true;column:is_active"`
 	CreatedAt    time.Time `gorm:"not null;default:now();column:created_at"`

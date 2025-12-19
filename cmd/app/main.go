@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/sinakeshmiri/imcore/repository/user"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/sinakeshmiri/imcore/repository/user"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,13 +16,15 @@ import (
 )
 
 func main() {
-	postgres, err := database.OpenPostgres("postgres://app:app@localhost:5432/app?sslmode=disable")
+	postgres, err := database.OpenPostgres("postgres://app:app@localhost:5435/app?sslmode=disable")
 	if err != nil {
 		log.Fatal(err)
 	}
 	userRepository := repository.NewUserRepository(postgres)
-	useCase := usecase.NewCreateUserUsecase(userRepository, 3*time.Second)
-	handler := controller.NewHandler(useCase)
+	roleRepository := repository.NewRoleRepository(postgres)
+	userUseCase := usecase.NewUserUsecase(userRepository, 3*time.Second)
+	roleUsecase := usecase.NewRoleUsecase(roleRepository, 3*time.Second)
+	handler := controller.NewHandler(userUseCase, roleUsecase)
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 

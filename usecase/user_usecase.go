@@ -2,19 +2,20 @@ package usecase
 
 import (
 	"context"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/sinakeshmiri/imcore/domain"
 )
 
-type creatUserUsecase struct {
+type userUsecase struct {
 	userRepository domain.UserRepository
 	contextTimeout time.Duration
 }
 
-func (cu creatUserUsecase) Create(ctx context.Context, req *domain.CreateUserRequest) error {
+func (cu userUsecase) Create(ctx context.Context, req *domain.CreateUserRequest) error {
 	byEmail, err := cu.userRepository.FindByEmail(ctx, req.Email)
 	if err != nil {
 		log.Printf("failed to check if the user already exists or not %s\n", err)
@@ -34,6 +35,8 @@ func (cu creatUserUsecase) Create(ctx context.Context, req *domain.CreateUserReq
 	}
 	passwordHash := string(hashBytes)
 	user := domain.User{
+		Fullname:     req.Fullname,
+		Username:     req.Username,
 		Email:        req.Email,
 		PasswordHash: passwordHash,
 		IsActive:     true,
@@ -48,8 +51,8 @@ func (cu creatUserUsecase) Create(ctx context.Context, req *domain.CreateUserReq
 	return nil
 }
 
-func NewCreateUserUsecase(userRepository domain.UserRepository, timeout time.Duration) domain.CreateUserUsecase {
-	return &creatUserUsecase{
+func NewUserUsecase(userRepository domain.UserRepository, timeout time.Duration) domain.UserUsecase {
+	return &userUsecase{
 		userRepository: userRepository,
 		contextTimeout: timeout,
 	}
