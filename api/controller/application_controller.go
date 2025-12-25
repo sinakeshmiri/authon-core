@@ -8,8 +8,26 @@ import (
 )
 
 func (h *Handler) ListApplications(ctx context.Context, request api.ListApplicationsRequestObject) (api.ListApplicationsResponseObject, error) {
-	//TODO implement me
-	panic("implement me")
+	outgoing, err := h.applicationUsecase.ListOutgoing(ctx, request.Params.User)
+	if err != nil {
+		return nil, err
+	}
+	incoming, err := h.applicationUsecase.ListIncoming(ctx, request.Params.User)
+	if err != nil {
+		return nil, err
+	}
+	resOutgoing := make([]api.Application, 0, len(outgoing))
+	resIncoming := make([]api.Application, 0, len(incoming))
+	for _, entity := range outgoing {
+		resOutgoing = append(resOutgoing, mapApplicationFromDomain(entity))
+	}
+	for _, entity := range incoming {
+		resIncoming = append(resIncoming, mapApplicationFromDomain(entity))
+	}
+	return api.ListApplications200JSONResponse{
+		Incoming: &resIncoming,
+		Outgoing: &resOutgoing,
+	}, nil
 }
 
 func (h *Handler) CreateApplication(ctx context.Context, request api.CreateApplicationRequestObject) (api.CreateApplicationResponseObject, error) {
@@ -22,18 +40,7 @@ func (h *Handler) CreateApplication(ctx context.Context, request api.CreateAppli
 	if err != nil {
 		return nil, err
 	}
-	status := app.Status.String()
-	return api.CreateApplication200JSONResponse{
-		ApplicantUsername: &app.ApplicantUsername,
-		CreatedAt:         &app.CreatedAt,
-		DecidedAt:         nil,
-		DecisionNote:      nil,
-		Id:                &app.ID,
-		OwnerUsername:     &app.OwnerUsername,
-		Reason:            &app.Reason,
-		Rolename:          &app.Rolename,
-		Status:            &status,
-	}, nil
+	return api.CreateApplication200JSONResponse(mapApplicationFromDomain(app)), nil
 }
 
 func (h *Handler) GetApplication(ctx context.Context, request api.GetApplicationRequestObject) (api.GetApplicationResponseObject, error) {
@@ -44,4 +51,20 @@ func (h *Handler) GetApplication(ctx context.Context, request api.GetApplication
 func (h *Handler) PatchApplication(ctx context.Context, request api.PatchApplicationRequestObject) (api.PatchApplicationResponseObject, error) {
 	//TODO implement me
 	panic("implement me")
+}
+
+func mapApplicationFromDomain(entity *domain.Application) api.Application {
+	status := entity.Status.String()
+
+	return api.Application{
+		ApplicantUsername: &entity.ApplicantUsername,
+		CreatedAt:         &entity.CreatedAt,
+		DecidedAt:         entity.DecidedAt,
+		DecisionNote:      &entity.DecisionNote,
+		Id:                &entity.ID,
+		OwnerUsername:     &entity.OwnerUsername,
+		Reason:            &entity.Reason,
+		Rolename:          &entity.Rolename,
+		Status:            &status,
+	}
 }

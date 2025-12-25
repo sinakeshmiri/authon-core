@@ -153,6 +153,7 @@ func toDomain(m ApplicationModel) (domain.Application, error) {
 	return domain.Application{
 		ID:                m.ID,
 		Rolename:          m.Rolename,
+		OwnerUsername:     m.OwnerUsername,
 		ApplicantUsername: m.ApplicantUsername,
 		Status:            status,
 		Reason:            m.Reason,
