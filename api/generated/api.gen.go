@@ -24,13 +24,6 @@ const (
 	REJECTED ApplicationStatus = "REJECTED"
 )
 
-// Defines values for ListApplicationsParamsDirection.
-const (
-	All      ListApplicationsParamsDirection = "all"
-	Incoming ListApplicationsParamsDirection = "incoming"
-	Outgoing ListApplicationsParamsDirection = "outgoing"
-)
-
 // Application defines model for Application.
 type Application struct {
 	ApplicantUsername *string    `json:"applicantUsername,omitempty"`
@@ -67,6 +60,12 @@ type CreateUserRequest struct {
 	Fullname string              `json:"fullname"`
 	Password string              `json:"password"`
 	Username string              `json:"username"`
+}
+
+// ListApplicationsResponse defines model for ListApplicationsResponse.
+type ListApplicationsResponse struct {
+	Incoming *[]Application `json:"incoming,omitempty"`
+	Outgoing *[]Application `json:"outgoing,omitempty"`
 }
 
 // PatchApplicationRequest defines model for PatchApplicationRequest.
@@ -113,16 +112,7 @@ type UserResponse struct {
 type ListApplicationsParams struct {
 	// User applications for the specific user
 	User string `form:"user" json:"user"`
-
-	// Direction incoming = applications for roles I own (I can review), outgoing = applications I submitted, all = both.
-	Direction *ListApplicationsParamsDirection `form:"direction,omitempty" json:"direction,omitempty"`
-
-	// Status Filter by application status
-	Status *ApplicationStatus `form:"status,omitempty" json:"status,omitempty"`
 }
-
-// ListApplicationsParamsDirection defines parameters for ListApplications.
-type ListApplicationsParamsDirection string
 
 // CreateApplicationJSONRequestBody defines body for CreateApplication for application/json ContentType.
 type CreateApplicationJSONRequestBody = CreateApplicationRequest
@@ -287,22 +277,6 @@ func (siw *ServerInterfaceWrapper) ListApplications(w http.ResponseWriter, r *ht
 	err = runtime.BindQueryParameter("form", true, true, "user", r.URL.Query(), &params.User)
 	if err != nil {
 		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "user", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "direction" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "direction", r.URL.Query(), &params.Direction)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "direction", Err: err})
-		return
-	}
-
-	// ------------- Optional query parameter "status" -------------
-
-	err = runtime.BindQueryParameter("form", true, false, "status", r.URL.Query(), &params.Status)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
 		return
 	}
 
@@ -720,7 +694,7 @@ type ListApplicationsResponseObject interface {
 	VisitListApplicationsResponse(w http.ResponseWriter) error
 }
 
-type ListApplications200JSONResponse []Application
+type ListApplications200JSONResponse ListApplicationsResponse
 
 func (response ListApplications200JSONResponse) VisitListApplicationsResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")

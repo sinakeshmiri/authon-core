@@ -180,34 +180,13 @@ paths:
             applications for the specific user
           schema:
             type: string
-        - name: direction
-          in: query
-          required: false
-          description: >
-            incoming = applications for roles I own (I can review),
-            outgoing = applications I submitted,
-            all = both.
-          schema:
-            type: string
-            enum: [incoming, outgoing, all]
-            default: all
-
-        - name: status
-          in: query
-          required: false
-          description: Filter by application status
-          schema:
-            $ref: '#/components/schemas/ApplicationStatus'
-
       responses:
         '200':
           description: Applications list
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Application'
+                $ref: '#/components/schemas/ListApplicationsResponse'
         '400':
           description: Invalid query parameters
         '500':
@@ -320,6 +299,17 @@ components:
           type: string
           format: date-time
           nullable: true
+    ListApplicationsResponse:
+      type: object
+      properties:
+        outgoing:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
+        incoming:
+          type: array
+          items:
+            $ref: '#/components/schemas/Application'
     CreateApplicationRequest:
       type: object
       required: [ rolename ]
