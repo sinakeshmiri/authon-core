@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/sinakeshmiri/imcore/domain"
+	"github.com/sinakeshmiri/imcore/internal/roles/domain"
 )
 
 type roleUsecase struct {

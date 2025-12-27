@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sinakeshmiri/imcore/domain"
+	"github.com/sinakeshmiri/imcore/internal/applications/domain"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -17,27 +17,27 @@ type ApplicationRepository struct {
 	db *gorm.DB
 }
 
-func (a *ApplicationRepository) Reject(ctx context.Context, applicationID string, decisionNote *string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (a *ApplicationRepository) Create(c context.Context, roleName string, username string, reason string) (domain.Application, error) {
-	var role domain.Role
+	var ownerUsername string
+
 	err := a.db.WithContext(c).
 		Table("roles").
 		Select("owner_username").
 		Where("rolename = ?", roleName).
-		Scan(&role).Error
+		Scan(&ownerUsername).Error
+
 	if err != nil {
 		return domain.Application{}, err
+	}
+	if ownerUsername == "" {
+		return domain.Application{}, domain.ErrApplicationNotFound
 	}
 	now := time.Now()
 	app := domain.Application{
 		ID:                uuid.NewString(),
 		Rolename:          roleName,
 		ApplicantUsername: username,
-		OwnerUsername:     role.OwnerUsername,
+		OwnerUsername:     ownerUsername,
 		Status:            domain.Pending,
 		CreatedAt:         now,
 		Reason:            reason,
@@ -53,8 +53,22 @@ func (a *ApplicationRepository) Create(c context.Context, roleName string, usern
 }
 
 func (a *ApplicationRepository) GetByID(ctx context.Context, id string) (*domain.Application, error) {
-	//TODO implement me
-	panic("implement me")
+	var app ApplicationModel
+	err := a.db.WithContext(ctx).
+		Table("applications").
+		Where("id = ?", id).First(&app).
+		Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrApplicationNotFound
+		}
+		return nil, err
+	}
+	application, err := toDomain(app)
+	if err != nil {
+		return nil, err
+	}
+	return &application, nil
 }
 
 func (a *ApplicationRepository) ListOutGoing(c context.Context, applicantUsername string) ([]*domain.Application, error) {
@@ -73,7 +87,7 @@ func (a *ApplicationRepository) ListOutGoing(c context.Context, applicantUsernam
 
 	out := make([]*domain.Application, 0, len(models))
 	for _, m := range models {
-		d, err := toDomain(m) // if your toDomain returns (domain.Application, error)
+		d, err := toDomain(m)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +113,7 @@ func (a *ApplicationRepository) ListInComing(c context.Context, ownerUsername st
 
 	out := make([]*domain.Application, 0, len(models))
 	for _, m := range models {
-		d, err := toDomain(m) // (domain.Application, error)
+		d, err := toDomain(m)
 		if err != nil {
 			return nil, err
 		}
@@ -110,73 +124,35 @@ func (a *ApplicationRepository) ListInComing(c context.Context, ownerUsername st
 	return out, nil
 }
 func (a *ApplicationRepository) Approve(ctx context.Context, applicationID string, decisionNote *string) error {
-
 	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var app ApplicationModel
-		err := tx.WithContext(ctx).
-			Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("application_id = ?", applicationID).
-			First(&app).Error
-
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// TODO: add custom error
-			}
-			return err
-		}
-
-		current, err := domain.ParseStatus(app.Status)
+		app, err := a.decide(ctx, tx, applicationID, domain.Approved, decisionNote)
 		if err != nil {
 			return err
 		}
-		if current != domain.Pending {
-			return errors.New("application is not pending")
-		}
-
-		now := time.Now()
-		updates := map[string]any{
-			"status":     domain.Approved.String(),
-			"decided_at": now,
-		}
-		if decisionNote != nil {
-			updates["decision_note"] = *decisionNote
-		}
-
-		res := tx.WithContext(ctx).
-			Model(&ApplicationModel{}).
-			Where("application_id = ?", applicationID).
-			Where("status = ?", domain.Pending.String()).
-			Updates(updates)
-
-		if res.Error != nil {
-			return res.Error
-		}
-		if res.RowsAffected == 0 {
-			return errors.New("transaction affected 0 rows")
-		}
-
-		err = tx.WithContext(ctx).Exec(`
-			INSERT INTO user_roles (username, rolename)
-			VALUES (?, ?)
-			ON CONFLICT DO NOTHING
-		`, app.ApplicantUsername, app.Rolename).Error
-
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return tx.Exec(`
+        INSERT INTO user_roles (username, rolename)
+        VALUES (?, ?)
+        ON CONFLICT DO NOTHING
+    `, app.ApplicantUsername, app.Rolename).Error
 	})
 }
 
-func (a *ApplicationRepository) ExistsPending(
-	ctx context.Context,
-	rolename string,
-	username string,
-) (bool, error) {
+func (a *ApplicationRepository) Cancel(ctx context.Context, applicationID string, decisionNote *string) error {
+	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		_, err := a.decide(ctx, tx, applicationID, domain.Canceled, decisionNote)
+		return err
+	})
+}
 
+func (a *ApplicationRepository) Reject(ctx context.Context, applicationID string, decisionNote *string) error {
+	return a.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		_, err := a.decide(ctx, tx, applicationID, domain.Rejected, decisionNote)
+		return err
+	})
+}
+
+func (a *ApplicationRepository) ExistsPending(ctx context.Context, rolename string, username string) (bool, error) {
 	var count int64
-
 	err := a.db.WithContext(ctx).
 		Table("applications").
 		Where("rolename = ?", rolename).
@@ -184,11 +160,9 @@ func (a *ApplicationRepository) ExistsPending(
 		Where("status = ?", "PENDING").
 		Count(&count).
 		Error
-
 	if err != nil {
 		return false, err
 	}
-
 	return count > 0, nil
 }
 
@@ -239,4 +213,49 @@ func fromDomain(d domain.Application) ApplicationModel {
 }
 func NewApplicationRepository(db *gorm.DB) *ApplicationRepository {
 	return &ApplicationRepository{db: db}
+}
+
+func (a *ApplicationRepository) decide(ctx context.Context, tx *gorm.DB, applicationID string, newStatus domain.ApplicationStatus, decisionNote *string) (ApplicationModel, error) {
+	var app ApplicationModel
+	err := tx.WithContext(ctx).
+		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("application_id = ?", applicationID).
+		First(&app).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ApplicationModel{}, domain.ErrApplicationNotFound
+		}
+		return ApplicationModel{}, err
+	}
+
+	current, err := domain.ParseStatus(app.Status)
+	if err != nil {
+		return ApplicationModel{}, err
+	}
+	if current != domain.Pending {
+		return ApplicationModel{}, domain.ErrInvalidTransition
+	}
+
+	updates := map[string]any{
+		"status":     newStatus.String(),
+		"decided_at": time.Now(),
+	}
+	if decisionNote != nil {
+		updates["decision_note"] = *decisionNote
+	}
+
+	res := tx.WithContext(ctx).
+		Model(&ApplicationModel{}).
+		Where("application_id = ?", applicationID).
+		Where("status = ?", domain.Pending.String()).
+		Updates(updates)
+
+	if res.Error != nil {
+		return ApplicationModel{}, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ApplicationModel{}, domain.ErrInvalidTransition
+	}
+
+	return app, nil
 }

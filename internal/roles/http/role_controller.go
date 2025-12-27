@@ -1,13 +1,22 @@
-package controller
+package http
 
 import (
 	"context"
 	"errors"
 
 	api "github.com/sinakeshmiri/imcore/api/generated"
-	"github.com/sinakeshmiri/imcore/domain"
+	"github.com/sinakeshmiri/imcore/internal/roles/domain"
 )
 
+type Handler struct {
+	roleUsecase domain.RoleUsecase
+}
+
+func NewHandler(roleUsecase domain.RoleUsecase) *Handler {
+	return &Handler{
+		roleUsecase: roleUsecase,
+	}
+}
 func (h *Handler) CreateRole(
 	ctx context.Context,
 	req api.CreateRoleRequestObject,

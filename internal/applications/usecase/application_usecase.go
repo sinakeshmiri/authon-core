@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/sinakeshmiri/imcore/domain"
+	domain2 "github.com/sinakeshmiri/imcore/internal/applications/domain"
 )
 
 type applicationUsecase struct {
-	applicationRepository domain.ApplicationRepository
+	applicationRepository domain2.ApplicationRepository
 	contextTimeout        time.Duration
 }
 
@@ -22,11 +22,15 @@ func (a *applicationUsecase) Approve(ctx context.Context, applicationID string, 
 }
 
 func (a *applicationUsecase) Reject(ctx context.Context, applicationID string, decisionNote *string) error {
-	//TODO implement me
-	panic("implement me")
+	err := a.applicationRepository.Reject(ctx, applicationID, decisionNote)
+	if err != nil {
+		// TODO: handle different types of errors
+		return err
+	}
+	return nil
 }
 
-func (a *applicationUsecase) ListIncoming(c context.Context, user string) ([]*domain.Application, error) {
+func (a *applicationUsecase) ListIncoming(c context.Context, user string) ([]*domain2.Application, error) {
 	incoming, err := a.applicationRepository.ListInComing(c, user)
 	if err != nil {
 		return nil, err
@@ -34,7 +38,7 @@ func (a *applicationUsecase) ListIncoming(c context.Context, user string) ([]*do
 	return incoming, nil
 }
 
-func (a *applicationUsecase) ListOutgoing(c context.Context, user string) ([]*domain.Application, error) {
+func (a *applicationUsecase) ListOutgoing(c context.Context, user string) ([]*domain2.Application, error) {
 	outgoing, err := a.applicationRepository.ListOutGoing(c, user)
 	if err != nil {
 		return nil, err
@@ -42,7 +46,7 @@ func (a *applicationUsecase) ListOutgoing(c context.Context, user string) ([]*do
 	return outgoing, nil
 }
 
-func (a *applicationUsecase) Create(c context.Context, req *domain.CreateApplicationRequest) (*domain.Application, error) {
+func (a *applicationUsecase) Create(c context.Context, req *domain2.CreateApplicationRequest) (*domain2.Application, error) {
 	exists, err := a.applicationRepository.ExistsPending(c, req.RoleName, req.ApplicantUsername)
 	if err != nil {
 		return nil, err
@@ -57,7 +61,7 @@ func (a *applicationUsecase) Create(c context.Context, req *domain.CreateApplica
 	return &app, nil
 }
 
-func NewApplicationUsecase(applicationRepository domain.ApplicationRepository, timeout time.Duration) domain.ApplicationUsecase {
+func NewApplicationUsecase(applicationRepository domain2.ApplicationRepository, timeout time.Duration) domain2.ApplicationUsecase {
 	return &applicationUsecase{
 		applicationRepository: applicationRepository,
 		contextTimeout:        timeout,

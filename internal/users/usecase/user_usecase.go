@@ -5,9 +5,8 @@ import (
 	"log"
 	"time"
 
+	domain "github.com/sinakeshmiri/imcore/internal/users/domain"
 	"golang.org/x/crypto/bcrypt"
-
-	"github.com/sinakeshmiri/imcore/domain"
 )
 
 type userUsecase struct {
