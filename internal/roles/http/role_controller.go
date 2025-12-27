@@ -1,13 +1,22 @@
-package controller
+package http
 
 import (
 	"context"
 	"errors"
 
-	api "github.com/sinakeshmiri/imcore/api/generated"
-	"github.com/sinakeshmiri/imcore/domain"
+	api "github.com/sinakeshmiri/authon-core/api/generated"
+	"github.com/sinakeshmiri/authon-core/internal/roles/domain"
 )
 
+type Handler struct {
+	roleUsecase domain.RoleUsecase
+}
+
+func NewHandler(roleUsecase domain.RoleUsecase) *Handler {
+	return &Handler{
+		roleUsecase: roleUsecase,
+	}
+}
 func (h *Handler) CreateRole(
 	ctx context.Context,
 	req api.CreateRoleRequestObject,

@@ -193,7 +193,7 @@ paths:
     get:
       summary: List applications (incoming/outgoing for current user)
       operationId: listApplications
-      tags: [Applications]
+      tags: [ Applications ]
       parameters:
         - name: user
           in: query
@@ -217,7 +217,7 @@ paths:
     post:
       summary: Apply for a role (create an application)
       operationId: createApplication
-      tags: [Applications]
+      tags: [ Applications ]
       requestBody:
         required: true
         content:
@@ -385,15 +385,15 @@ components:
         - description
         - owner
       properties:
-       rolename:
+        rolename:
           type: string
           example: sinaRole
-       owner:
+        owner:
           type: string
           example: myUsername
-       description:
-         type: string
-         example: test_role
+        description:
+          type: string
+          example: test_role
     RoleResponse:
       type: object
       properties:
@@ -447,7 +447,7 @@ components:
           type: boolean
     PatchApplicationRequest:
       type: object
-      required: [status]
+      required: [ status ]
       properties:
         status:
           $ref: '#/components/schemas/ApplicationStatus'

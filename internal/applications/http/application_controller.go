@@ -1,12 +1,21 @@
-package controller
+package http
 
 import (
 	"context"
 
-	api "github.com/sinakeshmiri/imcore/api/generated"
-	"github.com/sinakeshmiri/imcore/domain"
+	api "github.com/sinakeshmiri/authon-core/api/generated"
+	"github.com/sinakeshmiri/authon-core/internal/applications/domain"
 )
 
+type Handler struct {
+	applicationUsecase domain.ApplicationUsecase
+}
+
+func NewHandler(applicationUsecase domain.ApplicationUsecase) *Handler {
+	return &Handler{
+		applicationUsecase: applicationUsecase,
+	}
+}
 func (h *Handler) ListApplications(ctx context.Context, request api.ListApplicationsRequestObject) (api.ListApplicationsResponseObject, error) {
 	outgoing, err := h.applicationUsecase.ListOutgoing(ctx, request.Params.User)
 	if err != nil {

@@ -1,13 +1,22 @@
-package controller
+package http
 
 import (
 	"context"
 	"errors"
 
-	api "github.com/sinakeshmiri/imcore/api/generated"
-	"github.com/sinakeshmiri/imcore/domain"
+	api "github.com/sinakeshmiri/authon-core/api/generated"
+	"github.com/sinakeshmiri/authon-core/internal/users/domain"
 )
 
+type Handler struct {
+	userUsecase domain.UserUsecase
+}
+
+func NewHandler(userUsecase domain.UserUsecase) *Handler {
+	return &Handler{
+		userUsecase: userUsecase,
+	}
+}
 func (h *Handler) CreateUser(
 	ctx context.Context,
 	req api.CreateUserRequestObject,
