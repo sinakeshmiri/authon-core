@@ -13,6 +13,15 @@ type applicationUsecase struct {
 	contextTimeout        time.Duration
 }
 
+func (a *applicationUsecase) Cancel(ctx context.Context, applicationID string, decisionNote *string) error {
+	err := a.applicationRepository.Cancel(ctx, applicationID, decisionNote)
+	if err != nil {
+		// TODO: handle different types of errors
+		return err
+	}
+	return nil
+}
+
 func (a *applicationUsecase) Approve(ctx context.Context, applicationID string, decisionNote *string) error {
 	err := a.applicationRepository.Approve(ctx, applicationID, decisionNote)
 	if err != nil {

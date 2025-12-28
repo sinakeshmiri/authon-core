@@ -57,18 +57,27 @@ func (h *Handler) GetApplication(ctx context.Context, request api.GetApplication
 	panic("implement me")
 }
 
-func (h *Handler) PatchApplication(ctx context.Context, request api.PatchApplicationRequestObject) (api.PatchApplicationResponseObject, error) {
-	if request.Body.Status == api.APPROVED {
-		err := h.applicationUsecase.Approve(ctx, request.ApplicationId.String(), request.Body.Note)
-		if err != nil {
-			return nil, err
-		}
-		return api.PatchApplication201Response{}, nil
-	} else if request.Body.Status == api.REJECTED {
-
+func (h *Handler) ApproveApplication(ctx context.Context, request api.ApproveApplicationRequestObject) (api.ApproveApplicationResponseObject, error) {
+	err := h.applicationUsecase.Approve(ctx, request.ApplicationId.String(), request.Body.Note)
+	if err != nil {
+		return nil, err
 	}
-	return api.PatchApplication403Response{}, nil
+	return api.ApproveApplication200Response{}, nil
 
+}
+func (h *Handler) RejectApplication(ctx context.Context, request api.RejectApplicationRequestObject) (api.RejectApplicationResponseObject, error) {
+	err := h.applicationUsecase.Reject(ctx, request.ApplicationId.String(), request.Body.Note)
+	if err != nil {
+		return nil, err
+	}
+	return api.RejectApplication200Response{}, nil
+}
+func (h *Handler) CancelApplication(ctx context.Context, request api.CancelApplicationRequestObject) (api.CancelApplicationResponseObject, error) {
+	err := h.applicationUsecase.Cancel(ctx, request.ApplicationId.String(), request.Body.Note)
+	if err != nil {
+		return nil, err
+	}
+	return api.CancelApplication200Response{}, nil
 }
 
 func mapApplicationFromDomain(entity *domain.Application) api.Application {

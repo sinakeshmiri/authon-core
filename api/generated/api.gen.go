@@ -16,14 +16,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-// Defines values for ApplicationStatus.
-const (
-	APPROVED ApplicationStatus = "APPROVED"
-	CANCELED ApplicationStatus = "CANCELED"
-	PENDING  ApplicationStatus = "PENDING"
-	REJECTED ApplicationStatus = "REJECTED"
-)
-
 // Application defines model for Application.
 type Application struct {
 	ApplicantUsername *string    `json:"applicantUsername,omitempty"`
@@ -36,9 +28,6 @@ type Application struct {
 	Rolename          *string    `json:"rolename,omitempty"`
 	Status            *string    `json:"status,omitempty"`
 }
-
-// ApplicationStatus defines model for ApplicationStatus.
-type ApplicationStatus string
 
 // CreateApplicationRequest defines model for CreateApplicationRequest.
 type CreateApplicationRequest struct {
@@ -62,17 +51,15 @@ type CreateUserRequest struct {
 	Username string              `json:"username"`
 }
 
+// DecisionNoteRequest defines model for DecisionNoteRequest.
+type DecisionNoteRequest struct {
+	Note *string `json:"note,omitempty"`
+}
+
 // ListApplicationsResponse defines model for ListApplicationsResponse.
 type ListApplicationsResponse struct {
 	Incoming *[]Application `json:"incoming,omitempty"`
 	Outgoing *[]Application `json:"outgoing,omitempty"`
-}
-
-// PatchApplicationRequest defines model for PatchApplicationRequest.
-type PatchApplicationRequest struct {
-	// Note Optional note when approving/rejecting/canceling
-	Note   *string           `json:"note,omitempty"`
-	Status ApplicationStatus `json:"status"`
 }
 
 // RoleResponse defines model for RoleResponse.
@@ -123,8 +110,14 @@ type ListApplicationsParams struct {
 // CreateApplicationJSONRequestBody defines body for CreateApplication for application/json ContentType.
 type CreateApplicationJSONRequestBody = CreateApplicationRequest
 
-// PatchApplicationJSONRequestBody defines body for PatchApplication for application/json ContentType.
-type PatchApplicationJSONRequestBody = PatchApplicationRequest
+// ApproveApplicationJSONRequestBody defines body for ApproveApplication for application/json ContentType.
+type ApproveApplicationJSONRequestBody = DecisionNoteRequest
+
+// CancelApplicationJSONRequestBody defines body for CancelApplication for application/json ContentType.
+type CancelApplicationJSONRequestBody = DecisionNoteRequest
+
+// RejectApplicationJSONRequestBody defines body for RejectApplication for application/json ContentType.
+type RejectApplicationJSONRequestBody = DecisionNoteRequest
 
 // CreateRoleJSONRequestBody defines body for CreateRole for application/json ContentType.
 type CreateRoleJSONRequestBody = CreateRoleRequest
@@ -149,9 +142,15 @@ type ServerInterface interface {
 	// Get an application and its status
 	// (GET /applications/{application_id})
 	GetApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID)
-	// Update application status
-	// (PATCH /applications/{application_id})
-	PatchApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID)
+	// Approve an application (owner)
+	// (POST /applications/{application_id}/approve)
+	ApproveApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID)
+	// Cancel an application (applicant)
+	// (POST /applications/{application_id}/cancel)
+	CancelApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID)
+	// Reject an application (owner)
+	// (POST /applications/{application_id}/reject)
+	RejectApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID)
 	// Create a role
 	// (POST /roles)
 	CreateRole(w http.ResponseWriter, r *http.Request)
@@ -203,9 +202,21 @@ func (_ Unimplemented) GetApplication(w http.ResponseWriter, r *http.Request, ap
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update application status
-// (PATCH /applications/{application_id})
-func (_ Unimplemented) PatchApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+// Approve an application (owner)
+// (POST /applications/{application_id}/approve)
+func (_ Unimplemented) ApproveApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Cancel an application (applicant)
+// (POST /applications/{application_id}/cancel)
+func (_ Unimplemented) CancelApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Reject an application (owner)
+// (POST /applications/{application_id}/reject)
+func (_ Unimplemented) RejectApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -345,8 +356,8 @@ func (siw *ServerInterfaceWrapper) GetApplication(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
-// PatchApplication operation middleware
-func (siw *ServerInterfaceWrapper) PatchApplication(w http.ResponseWriter, r *http.Request) {
+// ApproveApplication operation middleware
+func (siw *ServerInterfaceWrapper) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 
 	var err error
 
@@ -360,7 +371,57 @@ func (siw *ServerInterfaceWrapper) PatchApplication(w http.ResponseWriter, r *ht
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PatchApplication(w, r, applicationId)
+		siw.Handler.ApproveApplication(w, r, applicationId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelApplication operation middleware
+func (siw *ServerInterfaceWrapper) CancelApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "application_id" -------------
+	var applicationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "application_id", chi.URLParam(r, "application_id"), &applicationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelApplication(w, r, applicationId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RejectApplication operation middleware
+func (siw *ServerInterfaceWrapper) RejectApplication(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "application_id" -------------
+	var applicationId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "application_id", chi.URLParam(r, "application_id"), &applicationId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "application_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RejectApplication(w, r, applicationId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -696,7 +757,13 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/applications/{application_id}", wrapper.GetApplication)
 	})
 	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/applications/{application_id}", wrapper.PatchApplication)
+		r.Post(options.BaseURL+"/applications/{application_id}/approve", wrapper.ApproveApplication)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/applications/{application_id}/cancel", wrapper.CancelApplication)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/applications/{application_id}/reject", wrapper.RejectApplication)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/roles", wrapper.CreateRole)
@@ -836,43 +903,125 @@ func (response GetApplication404Response) VisitGetApplicationResponse(w http.Res
 	return nil
 }
 
-type PatchApplicationRequestObject struct {
+type ApproveApplicationRequestObject struct {
 	ApplicationId openapi_types.UUID `json:"application_id"`
-	Body          *PatchApplicationJSONRequestBody
+	Body          *ApproveApplicationJSONRequestBody
 }
 
-type PatchApplicationResponseObject interface {
-	VisitPatchApplicationResponse(w http.ResponseWriter) error
+type ApproveApplicationResponseObject interface {
+	VisitApproveApplicationResponse(w http.ResponseWriter) error
 }
 
-type PatchApplication201Response struct {
+type ApproveApplication200Response struct {
 }
 
-func (response PatchApplication201Response) VisitPatchApplicationResponse(w http.ResponseWriter) error {
-	w.WriteHeader(201)
+func (response ApproveApplication200Response) VisitApproveApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
 	return nil
 }
 
-type PatchApplication403Response struct {
+type ApproveApplication403Response struct {
 }
 
-func (response PatchApplication403Response) VisitPatchApplicationResponse(w http.ResponseWriter) error {
+func (response ApproveApplication403Response) VisitApproveApplicationResponse(w http.ResponseWriter) error {
 	w.WriteHeader(403)
 	return nil
 }
 
-type PatchApplication404Response struct {
+type ApproveApplication404Response struct {
 }
 
-func (response PatchApplication404Response) VisitPatchApplicationResponse(w http.ResponseWriter) error {
+func (response ApproveApplication404Response) VisitApproveApplicationResponse(w http.ResponseWriter) error {
 	w.WriteHeader(404)
 	return nil
 }
 
-type PatchApplication409Response struct {
+type ApproveApplication409Response struct {
 }
 
-func (response PatchApplication409Response) VisitPatchApplicationResponse(w http.ResponseWriter) error {
+func (response ApproveApplication409Response) VisitApproveApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(409)
+	return nil
+}
+
+type CancelApplicationRequestObject struct {
+	ApplicationId openapi_types.UUID `json:"application_id"`
+	Body          *CancelApplicationJSONRequestBody
+}
+
+type CancelApplicationResponseObject interface {
+	VisitCancelApplicationResponse(w http.ResponseWriter) error
+}
+
+type CancelApplication200Response struct {
+}
+
+func (response CancelApplication200Response) VisitCancelApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type CancelApplication403Response struct {
+}
+
+func (response CancelApplication403Response) VisitCancelApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(403)
+	return nil
+}
+
+type CancelApplication404Response struct {
+}
+
+func (response CancelApplication404Response) VisitCancelApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type CancelApplication409Response struct {
+}
+
+func (response CancelApplication409Response) VisitCancelApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(409)
+	return nil
+}
+
+type RejectApplicationRequestObject struct {
+	ApplicationId openapi_types.UUID `json:"application_id"`
+	Body          *RejectApplicationJSONRequestBody
+}
+
+type RejectApplicationResponseObject interface {
+	VisitRejectApplicationResponse(w http.ResponseWriter) error
+}
+
+type RejectApplication200Response struct {
+}
+
+func (response RejectApplication200Response) VisitRejectApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(200)
+	return nil
+}
+
+type RejectApplication403Response struct {
+}
+
+func (response RejectApplication403Response) VisitRejectApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(403)
+	return nil
+}
+
+type RejectApplication404Response struct {
+}
+
+func (response RejectApplication404Response) VisitRejectApplicationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(404)
+	return nil
+}
+
+type RejectApplication409Response struct {
+}
+
+func (response RejectApplication409Response) VisitRejectApplicationResponse(w http.ResponseWriter) error {
 	w.WriteHeader(409)
 	return nil
 }
@@ -1125,9 +1274,15 @@ type StrictServerInterface interface {
 	// Get an application and its status
 	// (GET /applications/{application_id})
 	GetApplication(ctx context.Context, request GetApplicationRequestObject) (GetApplicationResponseObject, error)
-	// Update application status
-	// (PATCH /applications/{application_id})
-	PatchApplication(ctx context.Context, request PatchApplicationRequestObject) (PatchApplicationResponseObject, error)
+	// Approve an application (owner)
+	// (POST /applications/{application_id}/approve)
+	ApproveApplication(ctx context.Context, request ApproveApplicationRequestObject) (ApproveApplicationResponseObject, error)
+	// Cancel an application (applicant)
+	// (POST /applications/{application_id}/cancel)
+	CancelApplication(ctx context.Context, request CancelApplicationRequestObject) (CancelApplicationResponseObject, error)
+	// Reject an application (owner)
+	// (POST /applications/{application_id}/reject)
+	RejectApplication(ctx context.Context, request RejectApplicationRequestObject) (RejectApplicationResponseObject, error)
 	// Create a role
 	// (POST /roles)
 	CreateRole(ctx context.Context, request CreateRoleRequestObject) (CreateRoleResponseObject, error)
@@ -1269,13 +1424,13 @@ func (sh *strictHandler) GetApplication(w http.ResponseWriter, r *http.Request, 
 	}
 }
 
-// PatchApplication operation middleware
-func (sh *strictHandler) PatchApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
-	var request PatchApplicationRequestObject
+// ApproveApplication operation middleware
+func (sh *strictHandler) ApproveApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+	var request ApproveApplicationRequestObject
 
 	request.ApplicationId = applicationId
 
-	var body PatchApplicationJSONRequestBody
+	var body ApproveApplicationJSONRequestBody
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
 		return
@@ -1283,18 +1438,84 @@ func (sh *strictHandler) PatchApplication(w http.ResponseWriter, r *http.Request
 	request.Body = &body
 
 	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
-		return sh.ssi.PatchApplication(ctx, request.(PatchApplicationRequestObject))
+		return sh.ssi.ApproveApplication(ctx, request.(ApproveApplicationRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PatchApplication")
+		handler = middleware(handler, "ApproveApplication")
 	}
 
 	response, err := handler(r.Context(), w, r, request)
 
 	if err != nil {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
-	} else if validResponse, ok := response.(PatchApplicationResponseObject); ok {
-		if err := validResponse.VisitPatchApplicationResponse(w); err != nil {
+	} else if validResponse, ok := response.(ApproveApplicationResponseObject); ok {
+		if err := validResponse.VisitApproveApplicationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelApplication operation middleware
+func (sh *strictHandler) CancelApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+	var request CancelApplicationRequestObject
+
+	request.ApplicationId = applicationId
+
+	var body CancelApplicationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelApplication(ctx, request.(CancelApplicationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelApplication")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelApplicationResponseObject); ok {
+		if err := validResponse.VisitCancelApplicationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RejectApplication operation middleware
+func (sh *strictHandler) RejectApplication(w http.ResponseWriter, r *http.Request, applicationId openapi_types.UUID) {
+	var request RejectApplicationRequestObject
+
+	request.ApplicationId = applicationId
+
+	var body RejectApplicationJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RejectApplication(ctx, request.(RejectApplicationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RejectApplication")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RejectApplicationResponseObject); ok {
+		if err := validResponse.VisitRejectApplicationResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

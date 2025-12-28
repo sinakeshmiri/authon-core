@@ -15,6 +15,18 @@ type APIHandler struct {
 	Applications *appshttp.Handler
 }
 
+func (h *APIHandler) ApproveApplication(ctx context.Context, request api.ApproveApplicationRequestObject) (api.ApproveApplicationResponseObject, error) {
+	return h.Applications.ApproveApplication(ctx, request)
+}
+
+func (h *APIHandler) CancelApplication(ctx context.Context, request api.CancelApplicationRequestObject) (api.CancelApplicationResponseObject, error) {
+	return h.Applications.CancelApplication(ctx, request)
+}
+
+func (h *APIHandler) RejectApplication(ctx context.Context, request api.RejectApplicationRequestObject) (api.RejectApplicationResponseObject, error) {
+	return h.Applications.RejectApplication(ctx, request)
+}
+
 func (h *APIHandler) CreateUser(ctx context.Context, req api.CreateUserRequestObject) (api.CreateUserResponseObject, error) {
 	return h.Users.CreateUser(ctx, req)
 }
@@ -37,9 +49,6 @@ func (h *APIHandler) ListApplications(ctx context.Context, req api.ListApplicati
 }
 func (h *APIHandler) GetApplication(ctx context.Context, req api.GetApplicationRequestObject) (api.GetApplicationResponseObject, error) {
 	return h.Applications.GetApplication(ctx, req)
-}
-func (h *APIHandler) PatchApplication(ctx context.Context, req api.PatchApplicationRequestObject) (api.PatchApplicationResponseObject, error) {
-	return h.Applications.PatchApplication(ctx, req)
 }
 func (h *APIHandler) DeleteRole(ctx context.Context, request api.DeleteRoleRequestObject) (api.DeleteRoleResponseObject, error) {
 	return h.Roles.DeleteRole(ctx, request)

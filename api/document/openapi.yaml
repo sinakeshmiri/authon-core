@@ -261,37 +261,82 @@ paths:
                 $ref: '#/components/schemas/Application'
         '404':
           description: Not found
-    patch:
-      summary: Update application status
-      operationId: patchApplication
+  /applications/{application_id}/approve:
+    post:
+      summary: Approve an application (owner)
+      operationId: approveApplication
       tags: [ Applications ]
       parameters:
         - name: application_id
           in: path
           required: true
-          schema:
-            type: string
-            format: uuid
+          schema: { type: string, format: uuid }
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchApplicationRequest'
+              $ref: '#/components/schemas/DecisionNoteRequest'
       responses:
-        '201':
-          description: Updated
-        '403':
-          description: Not allowed
-        '409':
-          description: Invalid transition / already decided
-        '404':
-          description: Not found
+        '200': { description: Approved }
+        '403': { description: Not allowed }
+        '409': { description: Invalid transition }
+        '404': { description: Not found }
+
+  /applications/{application_id}/reject:
+    post:
+      summary: Reject an application (owner)
+      operationId: rejectApplication
+      tags: [ Applications ]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionNoteRequest'
+      responses:
+        '200': { description: Rejected }
+        '403': { description: Not allowed }
+        '409': { description: Invalid transition }
+        '404': { description: Not found }
+
+  /applications/{application_id}/cancel:
+    post:
+      summary: Cancel an application (applicant)
+      operationId: cancelApplication
+      tags: [ Applications ]
+      parameters:
+        - name: application_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionNoteRequest'
+      responses:
+        '200': { description: Canceled }
+        '403': { description: Not allowed }
+        '409': { description: Invalid transition }
+        '404': { description: Not found }
 
 
 
 components:
   schemas:
+    DecisionNoteRequest:
+      type: object
+      properties:
+        note:
+          type: string
+          example: "Approved: verified request."
     Application:
       type: object
       properties:

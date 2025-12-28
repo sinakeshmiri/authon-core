@@ -12,6 +12,7 @@ type ApplicationRepository interface {
 	ListInComing(c context.Context, id string) ([]*Application, error)
 	Approve(ctx context.Context, applicationID string, decisionNote *string) error
 	Reject(ctx context.Context, applicationID string, decisionNote *string) error
+	Cancel(ctx context.Context, applicationID string, decisionNote *string) error
 	ExistsPending(c context.Context, role string, username string) (bool, error)
 }
 
